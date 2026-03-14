@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.utils.class_weight import compute_class_weight
 
 from data_utils import load_data, clean_data, FEATURE_COLS, LABEL_COL
 
@@ -21,7 +22,7 @@ OUTPUT_DIR = "outputs/scenario_b"
 BATCH_SIZE = 256
 EPOCHS = 100       # max epochs
 LR = 1e-3
-PATIENCE = 5       # stop if val loss doesn't improve for 5 consecutive epochs
+PATIENCE = 15      # stop if val loss doesn't improve for 15 consecutive epochs
 
 
 class TrafficCNN(nn.Module):
@@ -39,9 +40,12 @@ class TrafficCNN(nn.Module):
             nn.ReLU(),
         )
         self.fc = nn.Sequential(
-            nn.Linear(64 * n_features, 128),
+            nn.Linear(64 * n_features, 256),
             nn.ReLU(),
             nn.Dropout(0.3),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
             nn.Linear(128, n_classes),
         )
 
@@ -147,7 +151,9 @@ if __name__ == "__main__":
     n_classes = len(le.classes_)
     model = TrafficCNN(n_features=len(FEATURE_COLS), n_classes=n_classes)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-    criterion = nn.CrossEntropyLoss()
+
+    class_weights = compute_class_weight("balanced", classes=np.unique(y_train), y=y_train)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32))
 
     print(f"\nTraining 1D CNN (max {EPOCHS} epochs, patience={PATIENCE})...")
     train_losses, val_losses = [], []
