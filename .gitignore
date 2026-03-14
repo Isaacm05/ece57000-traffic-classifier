@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+outputs/scenario_a1/
+outputs/scenario_b/
+confusion_matrix.png
+.claude/
